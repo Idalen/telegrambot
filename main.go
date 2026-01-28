@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
+
+	"telegram-bot/scraper/belasartes"
 
 	tele "gopkg.in/telebot.v3"
 )
@@ -42,9 +45,35 @@ func main() {
 		))
 	})
 
-	// Echo any text message
-	bot.Handle(tele.OnText, func(c tele.Context) error {
-		return c.Send("You said: " + c.Text())
+	bot.Handle("/movies", func(c tele.Context) error {
+		events, err := belasartes.ScrapeCineBelasArtes()
+		if err != nil {
+			log.Printf("scrape cinebelasartes: %v", err)
+			return c.Send("Sorry, I couldn't fetch the movie list right now.")
+		}
+
+		if len(events) == 0 {
+			return c.Send("No movies found at the moment.")
+		}
+
+		maxItems := 10
+		if len(events) < maxItems {
+			maxItems = len(events)
+		}
+
+		var b strings.Builder
+		for i := 0; i < maxItems; i++ {
+			ev := events[i]
+			b.WriteString(fmt.Sprintf("%d) %s", i+1, ev.Title))
+			if ev.Date != "" {
+				b.WriteString(fmt.Sprintf(" — %s", ev.Date))
+			}
+			if i < maxItems-1 {
+				b.WriteString("\n\n")
+			}
+		}
+
+		return c.Send(b.String())
 	})
 
 	log.Println("Bot is running...")
