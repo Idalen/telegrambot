@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"telegram-bot/handler"
+	"telegram-bot/register"
 	"telegram-bot/scraper/belasartes"
 
 	tele "gopkg.in/telebot.v3"
@@ -28,22 +30,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// /start command
-	bot.Handle("/start", func(c tele.Context) error {
-		return c.Send("Hello! 👋 I am your Go Telegram bot.")
-	})
+	h := &handler.Handler{
+		Bot: bot,
+		Register: register.New(),
+	}
 
-	bot.Handle("/days", func(c tele.Context) error {
-		startDate := time.Date(2023, 8, 6, 0, 0, 0, 0, time.UTC)
-		now := time.Now().UTC()
+	bot.Handle("/start", h.Start)
 
-		days := int(now.Sub(startDate).Hours() / 24)
-
-		return c.Send(fmt.Sprintf(
-			"Hello! 👋\nIt has been %d days since 2023-08-06.",
-			days,
-		))
-	})
+	bot.Handle("/dayssincewemet", h.DaysSinceWeMet)
+	bot.Handle("/stopdayssincewemet", h.StopDaysSinceWeMet)
 
 	bot.Handle("/movies", func(c tele.Context) error {
 		events, err := belasartes.ScrapeCineBelasArtes()
