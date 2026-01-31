@@ -15,7 +15,7 @@ type Event struct {
 	Synopsis string `json:"synopsis"`
 }
 
-func ScrapeCineBelasArtes() ([]Event, error) {
+func GetEvents() ([]Event, error) {
 	url := "https://www.cinebelasartes.com.br/programacao-especial/"
 	client := &http.Client{Timeout: 15 * time.Second}
 
