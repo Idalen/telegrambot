@@ -38,7 +38,7 @@ func GetEvents() ([]Event, error) {
 
 	var events []Event
 
-	doc.Find(".c-movie-card__info-title-content").Each(func(_ int, card *goquery.Selection) {
+	doc.Find(".c-movie-card").Each(func(_ int, card *goquery.Selection) {
 		title := strings.TrimSpace(
 			card.Find(".c-movie-card__info-title").Text(),
 		)
