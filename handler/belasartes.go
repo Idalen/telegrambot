@@ -48,18 +48,19 @@ func (h *Handler) BelasArtes(c tele.Context) error {
 }
 
 func (h *Handler) BelasArtesJob(chatID int64) {
-	seenEvents := map[belasartes.Event]struct{}{}
-
 	events, _ := belasartes.GetEvents()
-	for _, event := range events {
-		if _, ok := seenEvents[event]; !ok {
-			h.Bot.Send(
-				tele.ChatID(chatID),
-				formatEventMessage(event),
-				tele.ModeMarkdown,
-			)
-			seenEvents[event] = struct{}{}
-		}
+	if len(events) == 0 {
+		return
+	}
+
+	toSend := h.Store.MarkSeenBelasArtes(chatID, events)
+
+	for _, event := range toSend {
+		h.Bot.Send(
+			tele.ChatID(chatID),
+			formatEventMessage(event),
+			tele.ModeMarkdown,
+		)
 	}
 }
 

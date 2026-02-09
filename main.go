@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"telegram-bot/handler"
+	"telegram-bot/inmem"
 	"telegram-bot/jobs"
 	"telegram-bot/register"
 	"telegram-bot/router"
@@ -41,9 +42,11 @@ func main() {
 		Register: register.New(),
 	}
 
+	store := inmem.New()
 	h := &handler.Handler{
 		Bot:    bot,
 		Logger: logger,
+		Store:  store,
 	}
 	r := &router.Router{
 		Orchestrator: orchestrator,
