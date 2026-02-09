@@ -62,3 +62,17 @@ func (r *JobRegistry) Stop(chatID int64, method string) (stopped bool) {
 	job.cancel()
 	return true
 }
+
+// Methods returns the active methods for a given chatID.
+func (r *JobRegistry) Methods(chatID int64) []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	methods := make([]string, 0)
+	for key := range r.jobs {
+		if key.chatID == chatID {
+			methods = append(methods, key.method)
+		}
+	}
+	return methods
+}
