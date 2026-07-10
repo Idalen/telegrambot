@@ -1,35 +1,47 @@
-package handler
+package climate
 
 import (
 	"fmt"
 	"strings"
 	"time"
 
+	"telegram-bot/constants"
 	"telegram-bot/weather"
-
-	"go.uber.org/zap"
-	tele "gopkg.in/telebot.v3"
 )
 
-func (h *Handler) SaoPauloClimate(c tele.Context) error {
-	h.Logger.Info("command actioned", zap.String("command", "/weather"))
-	msg, err := saoPauloClimateMessage(24*time.Hour, 6*time.Hour)
-	if err != nil {
-		return c.Send(err.Error())
-	}
-	return c.Send(msg)
+type Event struct {
+	message string
 }
 
-func (h *Handler) SaoPauloClimateJob(chatID int64) {
-	msg, err := saoPauloClimateMessage(24*time.Hour, 6*time.Hour)
-	if err != nil {
-		h.Bot.Send(tele.ChatID(chatID), err.Error())
-		return
-	}
-	h.Bot.Send(tele.ChatID(chatID), msg)
+func (e *Event) ID() string {
+	return "climate-" + time.Now().Format("2006-01-02")
 }
 
-func saoPauloClimateMessage(window time.Duration, block time.Duration) (string, error) {
+func (e *Event) String() string {
+	return e.message
+}
+
+func (e *Event) Source() string {
+	return constants.MethodWeather
+}
+
+func (e *Event) Image() string {
+	return ""
+}
+
+func Job() (*Event, error) {
+	msg, err := message(24*time.Hour, 6*time.Hour)
+	if err != nil {
+		return nil, err
+	}
+	return &Event{message: msg}, nil
+}
+
+func Message(window time.Duration, block time.Duration) (string, error) {
+	return message(window, block)
+}
+
+func message(window time.Duration, block time.Duration) (string, error) {
 	data, err := weather.SaoPauloHourlyForecast()
 	if err != nil {
 		return "", err

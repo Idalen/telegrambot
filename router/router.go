@@ -1,22 +1,23 @@
 package router
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	"telegram-bot/constants"
-	"telegram-bot/handler"
 	"telegram-bot/jobs"
+	"telegram-bot/publisher/belasartes"
+	"telegram-bot/publisher/climate"
+	"telegram-bot/publisher/daystogether"
+	"telegram-bot/publisher/espacoaugusta"
 
 	"go.uber.org/zap"
 	tele "gopkg.in/telebot.v3"
 )
 
 type Router struct {
-	Orchestrator *jobs.Orchestrator
-	Handler      *handler.Handler
-	Logger       *zap.Logger
+	Subscriptor *jobs.Subscriptor
+	Logger      *zap.Logger
 }
 
 func (r *Router) HandleText(c tele.Context) error {
@@ -28,7 +29,7 @@ func (r *Router) HandleText(c tele.Context) error {
 
 func (r *Router) HandleJobs(c tele.Context) error {
 	r.Logger.Info("command actioned", zap.String("command", "/jobs"))
-	methods := r.Orchestrator.Register.Methods(c.Chat().ID)
+	methods := r.Subscriptor.Register.Methods()
 	if len(methods) == 0 {
 		return c.Send("No active jobs.")
 	}
@@ -36,9 +37,12 @@ func (r *Router) HandleJobs(c tele.Context) error {
 	var b strings.Builder
 	b.WriteString("Active jobs:\n")
 	for i, method := range methods {
-		b.WriteString(fmt.Sprintf("%d. %s\n", i+1, method))
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		b.WriteString("- " + method)
 	}
-	return c.Send(strings.TrimRight(b.String(), "\n"))
+	return c.Send(b.String())
 }
 
 func (r *Router) handleStartText(c tele.Context) error {
@@ -59,21 +63,60 @@ func (r *Router) handleStartText(c tele.Context) error {
 			zap.String("command", constants.CommandStart),
 			zap.String("target", constants.CommandBelasArtes),
 		)
-		return r.Orchestrator.Start(c, constants.MethodBelasArtes, r.Handler.BelasArtesJob, 1*time.Hour)
+		return r.Subscriptor.Start(c, constants.MethodBelasArtes, func() ([]jobs.Event, error) {
+			events, err := belasartes.GetEvents()
+			if err != nil {
+				return nil, err
+			}
+			result := make([]jobs.Event, len(events))
+			for i, e := range events {
+				result[i] = e
+			}
+			return result, nil
+		}, 1*time.Hour)
 	case constants.CommandWeather:
 		r.Logger.Info(
 			"command actioned",
 			zap.String("command", constants.CommandStart),
 			zap.String("target", constants.CommandWeather),
 		)
-		return r.Orchestrator.Start(c, constants.MethodWeather, r.Handler.SaoPauloClimateJob, 24*time.Hour)
+		return r.Subscriptor.Start(c, constants.MethodWeather, func() ([]jobs.Event, error) {
+			event, err := climate.Job()
+			if err != nil {
+				return nil, err
+			}
+			return []jobs.Event{event}, nil
+		}, 24*time.Hour)
 	case constants.CommandDaysTogether:
 		r.Logger.Info(
 			"command actioned",
 			zap.String("command", constants.CommandStart),
 			zap.String("target", constants.CommandDaysTogether),
 		)
-		return r.Orchestrator.Start(c, constants.MethodDaysTogether, r.Handler.DaysTogetherJob, 24*time.Hour)
+		return r.Subscriptor.Start(c, constants.MethodDaysTogether, func() ([]jobs.Event, error) {
+			event, err := daystogether.Job()
+			if err != nil {
+				return nil, err
+			}
+			return []jobs.Event{event}, nil
+		}, 24*time.Hour)
+	case constants.CommandEspacoAugusta:
+		r.Logger.Info(
+			"command actioned",
+			zap.String("command", constants.CommandStart),
+			zap.String("target", constants.CommandEspacoAugusta),
+		)
+		return r.Subscriptor.Start(c, constants.MethodEspacoAugusta, func() ([]jobs.Event, error) {
+			events, err := espacoaugusta.GetEvents()
+			if err != nil {
+				return nil, err
+			}
+			result := make([]jobs.Event, len(events))
+			for i, e := range events {
+				result[i] = e
+			}
+			return result, nil
+		}, 1*time.Hour)
 	}
 
 	return nil
@@ -97,7 +140,7 @@ func (r *Router) handleStopText(c tele.Context) error {
 			zap.String("command", constants.CommandStop),
 			zap.String("target", constants.CommandBelasArtes),
 		)
-		if err := r.Orchestrator.Stop(c, constants.MethodBelasArtes); err != nil {
+		if err := r.Subscriptor.Stop(c, constants.MethodBelasArtes); err != nil {
 			return c.Send(err.Error())
 		}
 		return c.Send("Stopped belasartes updates.")
@@ -107,7 +150,7 @@ func (r *Router) handleStopText(c tele.Context) error {
 			zap.String("command", constants.CommandStop),
 			zap.String("target", constants.CommandWeather),
 		)
-		if err := r.Orchestrator.Stop(c, constants.MethodWeather); err != nil {
+		if err := r.Subscriptor.Stop(c, constants.MethodWeather); err != nil {
 			return c.Send(err.Error())
 		}
 		return c.Send("Stopped weather updates.")
@@ -117,7 +160,7 @@ func (r *Router) handleStopText(c tele.Context) error {
 			zap.String("command", constants.CommandStop),
 			zap.String("target", constants.CommandDaysTogether),
 		)
-		if err := r.Orchestrator.Stop(c, constants.MethodDaysTogether); err != nil {
+		if err := r.Subscriptor.Stop(c, constants.MethodDaysTogether); err != nil {
 			return c.Send(err.Error())
 		}
 		return c.Send("Stopped daystogether updates.")

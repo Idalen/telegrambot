@@ -11,37 +11,31 @@ type Job struct {
 
 type JobRegistry struct {
 	mu   sync.Mutex
-	jobs map[JobKey]Job
-}
-
-type JobKey struct {
-	chatID int64
-	method string
+	jobs map[string]Job
 }
 
 // New creats a new JobRegistry instance
 func New() *JobRegistry {
-	return &JobRegistry{jobs: make(map[JobKey]Job)}
+	return &JobRegistry{jobs: make(map[string]Job)}
 }
 
 // StartOnce starts fn in a goroutine if not already running for chatID.
 // Returns started=false if there is already a running job.
-func (r *JobRegistry) StartOnce(chatID int64, method string, fn func(ctx context.Context)) (started bool) {
+func (r *JobRegistry) StartOnce(method string, fn func(ctx context.Context)) (started bool) {
 	r.mu.Lock()
-	key := JobKey{chatID: chatID, method: method}
-	if _, exists := r.jobs[key]; exists {
+	if _, exists := r.jobs[method]; exists {
 		r.mu.Unlock()
 		return false
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	r.jobs[key] = Job{cancel: cancel}
+	r.jobs[method] = Job{cancel: cancel}
 	r.mu.Unlock()
 
 	go func() {
 		defer func() {
 			r.mu.Lock()
-			delete(r.jobs, key)
+			delete(r.jobs, method)
 			r.mu.Unlock()
 		}()
 		fn(ctx)
@@ -52,9 +46,9 @@ func (r *JobRegistry) StartOnce(chatID int64, method string, fn func(ctx context
 
 // Stop stops an asynchoronous goroutine if it is running.
 // Returns stopped=true if successful.
-func (r *JobRegistry) Stop(chatID int64, method string) (stopped bool) {
+func (r *JobRegistry) Stop(method string) (stopped bool) {
 	r.mu.Lock()
-	job, ok := r.jobs[JobKey{chatID: chatID, method: method}]
+	job, ok := r.jobs[method]
 	r.mu.Unlock()
 	if !ok {
 		return false
@@ -64,15 +58,13 @@ func (r *JobRegistry) Stop(chatID int64, method string) (stopped bool) {
 }
 
 // Methods returns the active methods for a given chatID.
-func (r *JobRegistry) Methods(chatID int64) []string {
+func (r *JobRegistry) Methods() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	methods := make([]string, 0)
-	for key := range r.jobs {
-		if key.chatID == chatID {
-			methods = append(methods, key.method)
-		}
+	for method := range r.jobs {
+		methods = append(methods, method)
 	}
 	return methods
 }

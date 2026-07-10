@@ -2,38 +2,38 @@ package inmem
 
 import (
 	"sync"
-
-	"telegram-bot/scraper/belasartes"
+	"time"
 )
 
 type Store struct {
-	mu             sync.Mutex
-	seenBelasArtes map[int64]map[belasartes.Event]struct{}
+	mu   sync.Mutex
+	seen map[string]time.Time
+	ttl  time.Duration
 }
 
-func New() *Store {
+func New(ttl time.Duration) *Store {
 	return &Store{
-		seenBelasArtes: make(map[int64]map[belasartes.Event]struct{}),
+		seen: make(map[string]time.Time),
+		ttl:  ttl,
 	}
 }
 
-func (s *Store) MarkSeenBelasArtes(chatID int64, events []belasartes.Event) []belasartes.Event {
+func (s *Store) MarkSeen(eventID string) (alreadySeen bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	seen := s.seenBelasArtes[chatID]
-	if seen == nil {
-		seen = make(map[belasartes.Event]struct{})
-		s.seenBelasArtes[chatID] = seen
+	now := time.Now()
+
+	if _, ok := s.seen[eventID]; ok {
+		return true
 	}
 
-	toSend := make([]belasartes.Event, 0)
-	for _, event := range events {
-		if _, ok := seen[event]; ok {
-			continue
+	for id, ts := range s.seen {
+		if now.Sub(ts) > s.ttl {
+			delete(s.seen, id)
 		}
-		seen[event] = struct{}{}
-		toSend = append(toSend, event)
 	}
-	return toSend
+
+	s.seen[eventID] = now
+	return false
 }

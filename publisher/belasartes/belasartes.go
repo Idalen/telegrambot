@@ -1,6 +1,7 @@
 package belasartes
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -9,13 +10,38 @@ import (
 )
 
 type Event struct {
-	Title    string `json:"title"`
-	Date     string `json:"date"`
-	URL      string `json:"url"`
-	Synopsis string `json:"synopsis"`
+	title    string
+	date     string
+	url      string
+	synopsis string
 }
 
-func GetEvents() ([]Event, error) {
+func (e *Event) ID() string {
+	return e.Source()+e.title+e.date
+}
+
+func (e *Event) String() string {
+	return fmt.Sprintf(
+		"🎬 <b>%s</b>\n"+
+			"📅 <i>Quando: %s</i>\n\n"+
+			"📝 %s\n\n"+
+			"🔗 <a href=\"%s\">Ver detalhes</a>",
+		e.title,
+		e.date,
+		e.synopsis,
+		e.url,
+	)
+}
+
+func (e *Event) Source() string {
+	return "belasartes"
+}
+
+func (e *Event) Image() string {
+	return ""
+}
+
+func GetEvents() ([]*Event, error) {
 	url := "https://www.cinebelasartes.com.br/programacao-especial/"
 	client := &http.Client{Timeout: 15 * time.Second}
 
@@ -36,7 +62,7 @@ func GetEvents() ([]Event, error) {
 		return nil, err
 	}
 
-	var events []Event
+	var events []*Event
 
 	doc.Find(".c-movie-card").Each(func(_ int, card *goquery.Selection) {
 		title := strings.TrimSpace(
@@ -61,11 +87,11 @@ func GetEvents() ([]Event, error) {
 			href = "https://www.cinebelasartes.com.br" + href
 		}
 
-		events = append(events, Event{
-			Title:    title,
-			Date:     date,
-			URL:      href,
-			Synopsis: synopsis,
+		events = append(events, &Event{
+			title:    title,
+			date:     date,
+			url:      href,
+			synopsis: synopsis,
 		})
 	})
 

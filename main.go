@@ -5,9 +5,7 @@ import (
 	"time"
 
 	"telegram-bot/handler"
-	"telegram-bot/inmem"
 	"telegram-bot/jobs"
-	"telegram-bot/register"
 	"telegram-bot/router"
 
 	"go.uber.org/zap"
@@ -38,27 +36,18 @@ func main() {
 		logger.Fatal("failed to create bot", zap.Error(err))
 	}
 
-	orchestrator := &jobs.Orchestrator{
-		Register: register.New(),
-	}
+	subscriptor := jobs.New(bot, logger)
 
-	store := inmem.New()
 	h := &handler.Handler{
 		Bot:    bot,
 		Logger: logger,
-		Store:  store,
 	}
 	r := &router.Router{
-		Orchestrator: orchestrator,
-		Handler:      h,
-		Logger:       logger,
+		Subscriptor: subscriptor,
+		Logger:      logger,
 	}
 
 	bot.Handle("/ping", h.Start)
-
-	bot.Handle("/daystogether", h.DaysTogether)
-	bot.Handle("/belasartes", h.BelasArtes)
-	bot.Handle("/weather", h.SaoPauloClimate)
 	bot.Handle("/jobs", r.HandleJobs)
 
 	bot.Handle(tele.OnText, r.HandleText)
