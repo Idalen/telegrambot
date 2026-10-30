@@ -47,10 +47,13 @@ func New(bot *tele.Bot, logger *zap.Logger) *Subscriptor {
 			}
 
 			subscriptor.mu.Lock()
-			chatIDs := subscriptor.subscriptions[event.Source()]
+			chatIDs := make([]int64, 0, len(subscriptor.subscriptions[event.Source()]))
+			for chatID := range subscriptor.subscriptions[event.Source()] {
+				chatIDs = append(chatIDs, chatID)
+			}
 			subscriptor.mu.Unlock()
 
-			for chatID := range chatIDs {
+			for _, chatID := range chatIDs {
 				if img := event.Image(); img != "" {
 					if _, err := subscriptor.Bot.Send(tele.ChatID(chatID), &tele.Photo{
 						File:    tele.FromURL(img),
@@ -114,10 +117,10 @@ func (s *Subscriptor) Start(c tele.Context, method string, job func() ([]Event, 
 
 	if !started {
 		s.wg.Done()
-		return c.Send(fmt.Sprintf("%s is already running", method))
+		return nil
 	}
 
-	return c.Send(fmt.Sprintf("Started %s", method))
+	return nil
 }
 
 func (s *Subscriptor) Stop(c tele.Context, method string) error {

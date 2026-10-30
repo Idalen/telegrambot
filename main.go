@@ -4,7 +4,7 @@ import (
 	"os"
 	"time"
 
-	"telegram-bot/handler"
+	"telegram-bot/constants"
 	"telegram-bot/jobs"
 	"telegram-bot/router"
 
@@ -38,19 +38,12 @@ func main() {
 
 	subscriptor := jobs.New(bot, logger)
 
-	h := &handler.Handler{
-		Bot:    bot,
-		Logger: logger,
-	}
 	r := &router.Router{
 		Subscriptor: subscriptor,
 		Logger:      logger,
 	}
 
-	bot.Handle("/ping", h.Start)
-	bot.Handle("/jobs", r.HandleJobs)
-
-	bot.Handle(tele.OnText, r.HandleText)
+	bot.Handle(constants.CommandSubscribe, r.HandleSubscribe)
 
 	logger.Info("bot is running")
 	bot.Start()
