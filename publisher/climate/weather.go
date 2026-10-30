@@ -1,4 +1,4 @@
-package weather
+package climate
 
 import (
 	"encoding/json"

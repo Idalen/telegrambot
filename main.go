@@ -2,11 +2,13 @@ package main
 
 import (
 	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"telegram-bot/constants"
 	"telegram-bot/jobs"
-	"telegram-bot/router"
 
 	"go.uber.org/zap"
 	tele "gopkg.in/telebot.v3"
@@ -36,14 +38,31 @@ func main() {
 		logger.Fatal("failed to create bot", zap.Error(err))
 	}
 
-	subscriptor := jobs.New(bot, logger)
+	events := make(chan jobs.Event)
+	done := make(chan struct{})
+	broadcaster := jobs.New(bot, logger)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); jobs.RunPublishers(events, done, logger) }()
+	go func() { defer wg.Done(); broadcaster.Run(events, done) }()
+	defer wg.Wait()
+	defer close(done)
 
-	r := &router.Router{
-		Subscriptor: subscriptor,
-		Logger:      logger,
-	}
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(signals)
+	go func() {
+		select {
+		case <-signals:
+			bot.Stop()
+		case <-done:
+		}
+	}()
 
-	bot.Handle(constants.CommandSubscribe, r.HandleSubscribe)
+	bot.Handle(constants.CommandSubscribe, func(c tele.Context) error {
+		broadcaster.Subscribe(c.Chat().ID)
+		return c.Send("Subscribed! You'll receive updates from all topics.")
+	})
 
 	logger.Info("bot is running")
 	bot.Start()

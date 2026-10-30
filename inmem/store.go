@@ -24,14 +24,14 @@ func (s *Store) MarkSeen(eventID string) (alreadySeen bool) {
 
 	now := time.Now()
 
-	if _, ok := s.seen[eventID]; ok {
-		return true
-	}
-
 	for id, ts := range s.seen {
-		if now.Sub(ts) > s.ttl {
+		if now.Sub(ts) >= s.ttl {
 			delete(s.seen, id)
 		}
+	}
+
+	if _, ok := s.seen[eventID]; ok {
+		return true
 	}
 
 	s.seen[eventID] = now

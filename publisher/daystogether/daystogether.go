@@ -2,6 +2,7 @@ package daystogether
 
 import (
 	"fmt"
+	"telegram-bot/message"
 	"time"
 
 	"telegram-bot/constants"
@@ -17,16 +18,12 @@ func (e *Event) ID() string {
 	return "daystogether-" + time.Now().Format("2006-01-02")
 }
 
-func (e *Event) String() string {
-	return e.message
+func (e *Event) Message() message.Message {
+	return message.Message{Format: message.PlainText, Text: e.message}
 }
 
 func (e *Event) Source() string {
 	return constants.MethodDaysTogether
-}
-
-func (e *Event) Image() string {
-	return ""
 }
 
 func Job() (*Event, error) {

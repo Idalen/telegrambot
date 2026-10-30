@@ -3,10 +3,10 @@ package climate
 import (
 	"fmt"
 	"strings"
+	eventmessage "telegram-bot/message"
 	"time"
 
 	"telegram-bot/constants"
-	"telegram-bot/weather"
 )
 
 type Event struct {
@@ -17,16 +17,12 @@ func (e *Event) ID() string {
 	return "climate-" + time.Now().Format("2006-01-02")
 }
 
-func (e *Event) String() string {
-	return e.message
+func (e *Event) Message() eventmessage.Message {
+	return eventmessage.Message{Format: eventmessage.PlainText, Text: e.message}
 }
 
 func (e *Event) Source() string {
 	return constants.MethodWeather
-}
-
-func (e *Event) Image() string {
-	return ""
 }
 
 func Job() (*Event, error) {
@@ -42,7 +38,7 @@ func Message(window time.Duration, block time.Duration) (string, error) {
 }
 
 func message(window time.Duration, block time.Duration) (string, error) {
-	data, err := weather.SaoPauloHourlyForecast()
+	data, err := SaoPauloHourlyForecast()
 	if err != nil {
 		return "", err
 	}

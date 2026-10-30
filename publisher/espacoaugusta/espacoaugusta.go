@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"telegram-bot/message"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -20,20 +21,16 @@ func (e *Event) ID() string {
 	return fmt.Sprintf("espacoaugusta-%s", e.title)
 }
 
-func (e *Event) String() string {
+func (e *Event) Message() message.Message {
 	var b strings.Builder
 	b.WriteString(fmt.Sprintf("<b>%s</b>\n", e.title))
 	b.WriteString(fmt.Sprintf("<i>%s</i>\n", e.director))
 	b.WriteString(e.info)
-	return b.String()
+	return message.Message{Format: message.HTML, Text: b.String(), ImageURL: e.poster}
 }
 
 func (e *Event) Source() string {
 	return "espacoaugusta"
-}
-
-func (e *Event) Image() string {
-	return e.poster
 }
 
 func GetEvents() ([]*Event, error) {

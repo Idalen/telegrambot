@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"telegram-bot/message"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -17,11 +18,11 @@ type Event struct {
 }
 
 func (e *Event) ID() string {
-	return e.Source()+e.title+e.date
+	return e.Source() + e.title + e.date
 }
 
-func (e *Event) String() string {
-	return fmt.Sprintf(
+func (e *Event) Message() message.Message {
+	return message.Message{Format: message.HTML, Text: fmt.Sprintf(
 		"🎬 <b>%s</b>\n"+
 			"📅 <i>Quando: %s</i>\n\n"+
 			"📝 %s\n\n"+
@@ -30,15 +31,11 @@ func (e *Event) String() string {
 		e.date,
 		e.synopsis,
 		e.url,
-	)
+	)}
 }
 
 func (e *Event) Source() string {
 	return "belasartes"
-}
-
-func (e *Event) Image() string {
-	return ""
 }
 
 func GetEvents() ([]*Event, error) {
