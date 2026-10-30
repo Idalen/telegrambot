@@ -15,4 +15,11 @@ type Message struct {
 	Text     string
 	ImageURL string
 	Format   Format
+	Document *Document
+}
+
+// Document carries a program that is too long for a single text message.
+type Document struct {
+	Name    string
+	Content []byte
 }

@@ -6,6 +6,7 @@ import (
 
 	"telegram-bot/constants"
 	"telegram-bot/publisher/belasartes"
+	"telegram-bot/publisher/cinemateca"
 	"telegram-bot/publisher/climate"
 	"telegram-bot/publisher/daystogether"
 	"telegram-bot/publisher/espacoaugusta"
@@ -14,14 +15,14 @@ import (
 )
 
 // Gather polls one source and publishes its events until done is closed.
-func Gather(events chan<- Event, done <-chan struct{}, job func() ([]Event, error), frequency time.Duration, logger *zap.Logger) {
-	ticker := time.NewTicker(frequency)
-	defer ticker.Stop()
+func Gather(events chan<- Event, done <-chan struct{}, job func() ([]Event, error), schedule Schedule, logger *zap.Logger) {
 	for {
+		timer := time.NewTimer(time.Until(schedule(time.Now())))
 		select {
 		case <-done:
+			timer.Stop()
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			batch, err := job()
 			if err != nil {
 				logger.Error("job failed", zap.Error(err))
@@ -41,11 +42,11 @@ func Gather(events chan<- Event, done <-chan struct{}, job func() ([]Event, erro
 // RunPublishers starts all information gatherers at application startup.
 func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger) {
 	var wg sync.WaitGroup
-	start := func(name string, job func() ([]Event, error), frequency time.Duration) {
+	start := func(name string, job func() ([]Event, error), schedule Schedule) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			Gather(events, done, job, frequency, logger.With(zap.String("source", name)))
+			Gather(events, done, job, schedule, logger.With(zap.String("source", name)))
 		}()
 	}
 	start(constants.MethodBelasArtes, func() ([]Event, error) {
@@ -58,7 +59,7 @@ func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger
 			result[i] = e
 		}
 		return result, nil
-	}, 1*time.Hour)
+	}, Every(time.Hour))
 
 	start(constants.MethodWeather, func() ([]Event, error) {
 		event, err := climate.Job()
@@ -66,7 +67,7 @@ func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger
 			return nil, err
 		}
 		return []Event{event}, nil
-	}, 24*time.Hour)
+	}, Every(24*time.Hour))
 
 	start(constants.MethodDaysTogether, func() ([]Event, error) {
 		event, err := daystogether.Job()
@@ -74,7 +75,7 @@ func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger
 			return nil, err
 		}
 		return []Event{event}, nil
-	}, 24*time.Hour)
+	}, Every(24*time.Hour))
 
 	start(constants.MethodEspacoAugusta, func() ([]Event, error) {
 		events, err := espacoaugusta.GetEvents()
@@ -86,7 +87,15 @@ func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger
 			result[i] = e
 		}
 		return result, nil
-	}, 1*time.Hour)
+	}, Every(time.Hour))
+
+	start(constants.MethodCinemateca, func() ([]Event, error) {
+		digest, err := cinemateca.Job()
+		if err != nil {
+			return nil, err
+		}
+		return []Event{digest}, nil
+	}, Weekly(time.Tuesday, 22))
 
 	wg.Wait()
 }

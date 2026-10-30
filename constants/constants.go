@@ -7,6 +7,7 @@ const (
 	MethodWeather       = "weather"
 	MethodDaysTogether  = "dayssincewemet"
 	MethodEspacoAugusta = "espacoaugusta"
+	MethodCinemateca    = "cinemateca"
 
 	TextSeparator = "\n\n----------------------------------------------------------------------------------------------------\n\n"
 )

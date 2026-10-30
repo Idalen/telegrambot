@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"bytes"
 	"telegram-bot/message"
 
 	tele "gopkg.in/telebot.v3"
@@ -16,6 +17,10 @@ func mapMessage(msg message.Message) (interface{}, *tele.SendOptions) {
 		options.ParseMode = tele.ModeMarkdown
 	case message.MarkdownV2:
 		options.ParseMode = tele.ModeMarkdownV2
+	}
+	if msg.Document != nil {
+		return &tele.Document{File: tele.FromReader(bytes.NewReader(msg.Document.Content)),
+			FileName: msg.Document.Name, Caption: msg.Text}, options
 	}
 	if msg.ImageURL != "" {
 		return &tele.Photo{

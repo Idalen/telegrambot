@@ -59,8 +59,9 @@ func (s *Broadcaster) Run(events <-chan Event, done <-chan struct{}) {
 				continue
 			}
 
-			msg, options := mapMessage(event.Message())
+			content := event.Message()
 			for _, chatID := range chatIDs {
+				msg, options := mapMessage(content)
 				if _, err := s.Bot.Send(tele.ChatID(chatID), msg, options); err != nil {
 					s.Logger.Error("failed to send event", zap.Error(err), zap.Int64("chat_id", chatID))
 				}
