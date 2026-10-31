@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"telegram-bot/constants"
+	"telegram-bot/publisher/baralto"
 	"telegram-bot/publisher/belasartes"
 	"telegram-bot/publisher/cinemateca"
 	"telegram-bot/publisher/climate"
@@ -96,6 +97,14 @@ func RunPublishers(events chan<- Event, done <-chan struct{}, logger *zap.Logger
 		}
 		return []Event{digest}, nil
 	}, Weekly(time.Tuesday, 22))
+
+	start(constants.MethodBarAlto, func() ([]Event, error) {
+		digest, err := baralto.Job()
+		if err != nil {
+			return nil, err
+		}
+		return []Event{digest}, nil
+	}, Weekly(time.Wednesday, 22))
 
 	wg.Wait()
 }
